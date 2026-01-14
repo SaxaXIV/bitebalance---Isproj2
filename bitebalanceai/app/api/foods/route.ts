@@ -1,0 +1,46 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+const seedFoods = [
+  { name: "Chicken breast (100g)", calories: 165, protein: 31, carbs: 0, fat: 3.6 },
+  { name: "White rice (1 cup)", calories: 205, protein: 4.3, carbs: 45, fat: 0.4 },
+  { name: "Egg (1 large)", calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8 },
+  { name: "Banana (1 medium)", calories: 105, protein: 1.3, carbs: 27, fat: 0.4 },
+];
+
+function num(q: string | null) {
+  if (!q) return null;
+  const n = Number(q);
+  return Number.isFinite(n) ? n : null;
+}
+
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const q = (url.searchParams.get("q") ?? "").trim();
+  const minCalories = num(url.searchParams.get("minCalories"));
+  const minProtein = num(url.searchParams.get("minProtein"));
+  const minCarbs = num(url.searchParams.get("minCarbs"));
+  const minFat = num(url.searchParams.get("minFat"));
+
+  const count = await prisma.food.count();
+  if (count === 0) {
+    await prisma.food.createMany({ data: seedFoods });
+  }
+
+  const items = await prisma.food.findMany({
+    where: {
+      AND: [
+        q ? { name: { contains: q, mode: "insensitive" } } : {},
+        minCalories != null ? { calories: { gte: minCalories } } : {},
+        minProtein != null ? { protein: { gte: minProtein } } : {},
+        minCarbs != null ? { carbs: { gte: minCarbs } } : {},
+        minFat != null ? { fat: { gte: minFat } } : {},
+      ],
+    },
+    orderBy: { name: "asc" },
+    take: 200,
+  });
+
+  return NextResponse.json({ items });
+}
+

@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  profile       UserProfile?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  foodLogs      FoodLog[]
+  mealPlans     MealPlan[]
+  posts         Post[]
+  comments      Comment[]
+  challenges    UserChallenge[]
+  subscriptions Subscription[]
+}
+
+model UserProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  heightCm      Float?
+  weightKg      Float?
+  activityLevel String?
+  goal          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Food {
+  id          String    @id @default(cuid())
+  name        String
+  calories    Float
+  protein     Float?
+  carbs       Float?
+  fat         Float?
+  fiber       Float?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  foodLogs    FoodLog[]
+}
+
+model FoodLog {
+  id          String   @id @default(cuid())
+  userId      String
+  foodId      String
+  quantity    Float    @default(1.0)
+  mealType    String   // e.g., "breakfast", "lunch", "dinner", "snack"
+  loggedAt    DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  food        Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([loggedAt])
+}
+
+model MealPlan {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  // e.g. "breakfast", "lunch", "dinner"
+  mealType  String
+  // Free-form description or list of foods
+  title     String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model Post {
+  id        String    @id @default(cuid())
+  userId    String
+  body      String
+  likes     Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  body      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model Challenge {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  points      Int
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  userStates  UserChallenge[]
+}
+
+model UserChallenge {
+  id          String     @id @default(cuid())
+  userId      String
+  challengeId String
+  status      String     @default("active") // active, completed
+  progress    Int        @default(0)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challenge   Challenge  @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, challengeId])
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  priceCents  Int
+  currency    String   @default("USD")
+  features    String?  // comma-separated for now
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       Subscription[]
+}
+
+model Subscription {
+  id        String            @id @default(cuid())
+  userId    String
+  planId    String
+  status    String            @default("active") // active, canceled
+  startedAt DateTime          @default(now())
+  endsAt    DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      SubscriptionPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

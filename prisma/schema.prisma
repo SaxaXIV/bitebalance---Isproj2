@@ -1,0 +1,338 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+
+model User {
+  user_id           BigInt   @id @default(autoincrement())
+  email             String   @unique
+  password_hash     String
+  name              String?
+  dob               DateTime?
+  height_cm         Decimal?
+  weight_kg         Decimal?
+  activity_level    String?
+  goal              String?
+  subscription_status String  @default("free")
+  created_at        DateTime @default(now())
+  last_login        DateTime?
+
+  Survey_Responses  Survey_Response[]
+  Meal_Logs         Meal_Log[]
+  Meal_Plans        Meal_Plan[]
+  Reports           Report[]
+  Reminders         Reminder[]
+  Achievements      Achievement[]
+  Community_Posts   Community_Post[]
+  Friendships       Friendship[] @relation("FriendshipUser")
+  FriendOf          Friendship[] @relation("FriendshipFriend")
+  Challenge_Participation Challenge_Participation[]
+  User_Subscriptions User_Subscription[]
+  Nutrition_Intake_Daily Nutrition_Intake_Daily[]
+  Nutritionist_Feedback Nutritionist_Feedback[]
+  GenAI_Insights    GenAI_Insight[]
+}
+
+model Admin {
+  admin_id          BigInt   @id @default(autoincrement())
+  name              String
+  email             String   @unique
+  password_hash     String
+  role              String   @default("moderator")
+  is_nutritionist   Boolean  @default(false)
+
+  Food_Items_Created Food_Item[] @relation("CreatedBy")
+  Food_Items_Verified Food_Item[] @relation("VerifiedByNutritionist")
+  Challenges_Created Challenge[]
+  Nutritionist_Feedback Nutritionist_Feedback[]
+  GenAI_Insights_Reviewed GenAI_Insight[] @relation("ReviewedByAdmin")
+}
+
+model Survey_Response {
+  survey_id         BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  exercise_frequency String?
+  allergies         String?
+  goal              String?
+  calculated_bmr    Decimal?
+  target_calories   Decimal?
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model Food_Item {
+  food_id           BigInt   @id @default(autoincrement())
+  name              String
+  brand             String?
+  calories          Decimal?
+  protein_g         Decimal?
+  carbs_g           Decimal?
+  fat_g             Decimal?
+  serving_size      Decimal?
+  serving_unit      String?
+  source            String? @default("FNRI")
+  cuisine           String?
+  ai_generated      Boolean @default(false)
+  ai_confidence     Decimal?
+  created_by        BigInt?
+  verified_by_community Boolean @default(false)
+  verified_by_nutritionist BigInt?
+  verified_at       DateTime?
+  is_clinically_verified Boolean @default(false)
+  created_at        DateTime @default(now())
+
+  createdBy         Admin? @relation("CreatedBy", fields: [created_by], references: [admin_id])
+  verifiedBy        Admin? @relation("VerifiedByNutritionist", fields: [verified_by_nutritionist], references: [admin_id])
+  Meal_Logs         Meal_Log[]
+  Meal_Plans        Meal_Plan[]
+  Food_Nutrients    Food_Nutrient[]
+}
+
+model Meal_Log {
+  log_id            BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  food_id           BigInt?
+  custom_food_name  String?
+  quantity          Decimal? @default(1)
+  calories          Decimal?
+  meal_type         String?
+  logged_at         DateTime @default(now())
+  notes             String?
+
+  protein_g         Decimal?
+  carbs_g           Decimal?
+  fat_g             Decimal?
+  fiber_g           Decimal?
+  sodium_mg         Decimal?
+  sugar_g           Decimal?
+  cholesterol_mg    Decimal?
+  micronutrients_json Json?
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  food              Food_Item? @relation(fields: [food_id], references: [food_id], onDelete: SetNull)
+  Nutritionist_Feedback Nutritionist_Feedback[]
+  GenAI_Insights    GenAI_Insight[]
+  
+  @@index([user_id, logged_at])
+}
+
+model Meal_Plan {
+  plan_id           BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  meal_date         DateTime
+  meal_type         String
+  food_id           BigInt?
+  notes             String?
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  food              Food_Item? @relation(fields: [food_id], references: [food_id], onDelete: SetNull)
+}
+
+model Report {
+  report_id         BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  period_start      DateTime
+  period_end        DateTime
+  calories_total    Decimal?
+  protein_total     Decimal?
+  carbs_total       Decimal?
+  fat_total         Decimal?
+  fiber_total       Decimal?
+  sodium_total      Decimal?
+  micronutrients_json Json?
+  file_path         String?
+  created_at        DateTime @default(now())
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model Reminder {
+  reminder_id       BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  message           String
+  reminder_type     String?
+  scheduled_time    DateTime?
+  status            String   @default("pending")
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model Achievement {
+  achievement_id    BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  type              String?
+  description       String?
+  points            Int      @default(0)
+  achieved_at       DateTime @default(now())
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model Community_Post {
+  post_id           BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  content           String
+  image_url         String?
+  visibility        String   @default("public")
+  created_at        DateTime @default(now())
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model Friendship {
+  friendship_id     BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  friend_id         BigInt
+  status            String   @default("pending")
+  created_at        DateTime @default(now())
+
+  user              User @relation("FriendshipUser", fields: [user_id], references: [user_id], onDelete: Cascade)
+  friend            User @relation("FriendshipFriend", fields: [friend_id], references: [user_id], onDelete: Cascade)
+}
+
+model Challenge {
+  challenge_id      BigInt   @id @default(autoincrement())
+  name              String
+  description       String?
+  start_date        DateTime?
+  end_date          DateTime?
+  reward_points     Int      @default(0)
+  created_by        BigInt?
+  created_at        DateTime @default(now())
+
+  admin             Admin? @relation(fields: [created_by], references: [admin_id])
+  Challenge_Participation Challenge_Participation[]
+}
+
+model Challenge_Participation {
+  participation_id  BigInt   @id @default(autoincrement())
+  challenge_id      BigInt
+  user_id           BigInt
+  status            String   @default("enrolled")
+  joined_at         DateTime @default(now())
+  completed_at      DateTime?
+  points_awarded    Int      @default(0)
+
+  challenge         Challenge @relation(fields: [challenge_id], references: [challenge_id], onDelete: Cascade)
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+}
+
+model Subscription_Plan {
+  plan_id           BigInt   @id @default(autoincrement())
+  plan_name         String
+  description       String?
+  monthly_price     Decimal
+  annual_price      Decimal?
+  features           Json?
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now())
+
+  User_Subscriptions User_Subscription[]
+}
+
+model User_Subscription {
+  user_subscription_id BigInt @id @default(autoincrement())
+  user_id           BigInt
+  plan_id           BigInt
+  start_date        DateTime @default(now())
+  end_date          DateTime?
+  payment_status    String   @default("active")
+  renewal_type      String   @default("manual")
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  plan              Subscription_Plan @relation(fields: [plan_id], references: [plan_id])
+  Payments          Payment[]
+}
+
+model Payment {
+  payment_id        BigInt   @id @default(autoincrement())
+  user_subscription_id BigInt
+  amount            Decimal
+  payment_method    String?
+  transaction_ref   String?
+  status            String   @default("completed")
+  payment_date      DateTime @default(now())
+
+  user_subscription User_Subscription @relation(fields: [user_subscription_id], references: [user_subscription_id], onDelete: Cascade)
+}
+
+model Nutrient {
+  nutrient_id       BigInt   @id @default(autoincrement())
+  name              String
+  nutrient_type     String
+  unit              String
+  recommended_male  Decimal?
+  recommended_female Decimal?
+  importance        String?
+  Food_Nutrients    Food_Nutrient[]
+}
+
+model Food_Nutrient {
+  food_nutrient_id  BigInt   @id @default(autoincrement())
+  food_id           BigInt
+  nutrient_id       BigInt
+  amount_per_serving Decimal?
+  source            String?
+
+  food              Food_Item @relation(fields: [food_id], references: [food_id], onDelete: Cascade)
+  nutrient          Nutrient  @relation(fields: [nutrient_id], references: [nutrient_id], onDelete: Cascade)
+}
+
+model Nutrition_Intake_Daily {
+  intake_id         BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  intake_date       DateTime
+  calories_total    Decimal?
+  protein_total     Decimal?
+  carbs_total       Decimal?
+  fat_total         Decimal?
+  fiber_total       Decimal?
+  sodium_total      Decimal?
+  micronutrients_json Json?
+  computed_at       DateTime @default(now())
+
+  user              User @relation(fields: [user_id], references: [user_id], onDelete: Cascade)
+  Nutritionist_Feedback Nutritionist_Feedback[]
+  GenAI_Insights    GenAI_Insight[]
+  
+  @@index([user_id, intake_date])
+}
+
+model Nutritionist_Feedback {
+  feedback_id       BigInt   @id @default(autoincrement())
+  admin_id          BigInt
+  user_id           BigInt
+  intake_id         BigInt?
+  meal_log_id       BigInt?
+  comments          String
+  recommendation    String?
+  reviewed          Boolean  @default(false)
+  created_at        DateTime @default(now())
+
+  admin             Admin   @relation(fields: [admin_id], references: [admin_id])
+  user              User    @relation(fields: [user_id], references: [user_id])
+  intake            Nutrition_Intake_Daily? @relation(fields: [intake_id], references: [intake_id])
+  meal_log          Meal_Log? @relation(fields: [meal_log_id], references: [log_id])
+}
+
+model GenAI_Insight {
+  insight_id        BigInt   @id @default(autoincrement())
+  user_id           BigInt
+  meal_log_id       BigInt?
+  intake_id         BigInt?
+  prompt            String?
+  insight_text      String
+  model_name        String?
+  model_confidence  Decimal?
+  reviewed_by_admin BigInt?
+  created_at        DateTime @default(now())
+
+  user              User    @relation(fields: [user_id], references: [user_id])
+  meal_log          Meal_Log? @relation(fields: [meal_log_id], references: [log_id])
+  intake            Nutrition_Intake_Daily? @relation(fields: [intake_id], references: [intake_id])
+  admin             Admin?  @relation("ReviewedByAdmin", fields: [reviewed_by_admin], references: [admin_id])
+}
