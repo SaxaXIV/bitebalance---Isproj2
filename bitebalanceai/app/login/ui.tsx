@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 export function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const callbackUrl = search.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = search?.get("callbackUrl") ?? "/dashboard";
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
