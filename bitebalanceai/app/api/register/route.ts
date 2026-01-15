@@ -2,6 +2,27 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
 
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("origin") ?? "*";
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
+export async function OPTIONS(req: Request) {
+  return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
+}
+
+export async function GET(req: Request) {
+  return NextResponse.json(
+    { error: "Method Not Allowed" },
+    { status: 405, headers: corsHeaders(req) }
+  );
+}
+
 function calcDailyCalories(opts: {
   age: number;
   sex: string;
@@ -55,25 +76,31 @@ export async function POST(req: Request) {
     const allergies = (body?.allergies ?? "").toString().trim() || null;
 
     if (!fullName || !email || !password) {
-      return NextResponse.json({ error: "Full name, email and password are required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Full name, email and password are required." },
+        { status: 400, headers: corsHeaders(req) }
+      );
     }
     if (!username) {
-      return NextResponse.json({ error: "Username is required." }, { status: 400 });
+      return NextResponse.json({ error: "Username is required." }, { status: 400, headers: corsHeaders(req) });
     }
     if (password !== confirmPassword) {
-      return NextResponse.json({ error: "Passwords do not match." }, { status: 400 });
+      return NextResponse.json({ error: "Passwords do not match." }, { status: 400, headers: corsHeaders(req) });
     }
     if (password.length < 8) {
-      return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters." },
+        { status: 400, headers: corsHeaders(req) }
+      );
     }
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) {
-      return NextResponse.json({ error: "Email already in use." }, { status: 409 });
+      return NextResponse.json({ error: "Email already in use." }, { status: 409, headers: corsHeaders(req) });
     }
     const usernameExists = await prisma.user.findFirst({ where: { username } });
     if (usernameExists) {
-      return NextResponse.json({ error: "Username already in use." }, { status: 409 });
+      return NextResponse.json({ error: "Username already in use." }, { status: 409, headers: corsHeaders(req) });
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -130,11 +157,11 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, { headers: corsHeaders(req) });
   } catch (err: any) {
     // Most common production cause: DB not migrated yet (missing username/address columns)
     const msg = err?.message ? String(err.message) : "Registration failed.";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500, headers: corsHeaders(req) });
   }
 }
 
