@@ -24,8 +24,20 @@ export async function GET(req: Request) {
   const minFat = num(url.searchParams.get("minFat"));
 
   const count = await prisma.food.count();
-  if (count === 0) {
-    await prisma.food.createMany({ data: seedFoods });
+  if (count < 100) {
+    // Auto-seed if less than 100 foods exist
+    try {
+      const seedRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/seed-foods`, {
+        method: 'POST',
+      });
+      // Don't wait for completion, just trigger it
+    } catch (e) {
+      // Fallback to basic seed
+      await prisma.food.createMany({ 
+        data: seedFoods,
+        skipDuplicates: true 
+      });
+    }
   }
 
   const items = await prisma.food.findMany({

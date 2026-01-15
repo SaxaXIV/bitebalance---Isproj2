@@ -1,32 +1,30 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 
 export default function Home() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === "loading") return; // Still loading
+    if (session) {
+      router.push("/dashboard");
+    } else {
+      router.push("/login");
+    }
+  }, [session, status, router]);
+
+  // Show loading or redirect immediately
   return (
-    <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>BiteBalanceAI</CardTitle>
-          <CardDescription>
-            Track meals, understand macros, and plan your week.
-          </CardDescription>
-        </CardHeader>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard">
-            <Button>Go to Dashboard</Button>
-          </Link>
-          <Link href="/login">
-            <Button variant="secondary">Login</Button>
-          </Link>
-          <Link href="/register">
-            <Button variant="secondary">Register</Button>
-          </Link>
-          <Link href="/onboarding">
-            <Button variant="ghost">Onboarding</Button>
-          </Link>
-        </div>
-      </Card>
+    <div className="flex min-h-screen items-center justify-center">
+      <div className="text-center">
+        <div className="mb-4 text-2xl font-bold text-emerald-900">Bite Balance</div>
+        <div className="text-zinc-600">Redirecting...</div>
+      </div>
     </div>
   );
 }

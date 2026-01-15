@@ -58,23 +58,6 @@ export default function CommunityPage() {
     load();
   }, []);
 
-  async function createPost() {
-    if (!text.trim()) return;
-    setLoading(true);
-    const res = await fetch("/api/community", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ body: text }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      setError("Failed to create post (are you logged in?).");
-      return;
-    }
-    setText("");
-    await load();
-  }
-
   async function likePost(id: string) {
     await fetch("/api/community/like", {
       method: "POST",
