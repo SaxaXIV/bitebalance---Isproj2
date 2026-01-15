@@ -64,7 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const [{ default: bcrypt }, { prisma }] = await Promise.all([
-      import("bcrypt"),
+      import("bcryptjs"),
       import("../../lib/prisma"),
     ]);
 
