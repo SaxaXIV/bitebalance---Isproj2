@@ -18,43 +18,37 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
   const source = url.searchParams.get("source") ?? null; // "fnri" or "ai"
+  const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
+  const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? "50") || 50));
   const minCalories = num(url.searchParams.get("minCalories"));
   const minProtein = num(url.searchParams.get("minProtein"));
   const minCarbs = num(url.searchParams.get("minCarbs"));
   const minFat = num(url.searchParams.get("minFat"));
 
   const count = await prisma.food.count();
-  if (count < 100) {
-    // Auto-seed if less than 100 foods exist
-    try {
-      const seedRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/seed-foods`, {
-        method: 'POST',
-      });
-      // Don't wait for completion, just trigger it
-    } catch (e) {
-      // Fallback to basic seed
-      await prisma.food.createMany({ 
-        data: seedFoods,
-        skipDuplicates: true 
-      });
-    }
+  if (count === 0) {
+    await prisma.food.createMany({ data: seedFoods, skipDuplicates: true });
   }
 
+  const where = {
+    AND: [
+      q ? { name: { contains: q, mode: "insensitive" as const } } : {},
+      source ? { source } : {},
+      minCalories != null ? { calories: { gte: minCalories } } : {},
+      minProtein != null ? { protein: { gte: minProtein } } : {},
+      minCarbs != null ? { carbs: { gte: minCarbs } } : {},
+      minFat != null ? { fat: { gte: minFat } } : {},
+    ],
+  };
+
+  const total = await prisma.food.count({ where });
   const items = await prisma.food.findMany({
-    where: {
-      AND: [
-        q ? { name: { contains: q, mode: "insensitive" } } : {},
-        source ? { source } : {},
-        minCalories != null ? { calories: { gte: minCalories } } : {},
-        minProtein != null ? { protein: { gte: minProtein } } : {},
-        minCarbs != null ? { carbs: { gte: minCarbs } } : {},
-        minFat != null ? { fat: { gte: minFat } } : {},
-      ],
-    },
+    where,
     orderBy: { name: "asc" },
-    take: 200,
+    skip: (page - 1) * limit,
+    take: limit,
   });
 
-  return NextResponse.json({ items });
+  return NextResponse.json({ items, total, page, limit });
 }
 

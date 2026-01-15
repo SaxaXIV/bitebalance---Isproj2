@@ -7,6 +7,13 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json(
+        { error: "Gemini API not configured (missing GEMINI_API_KEY)." },
+        { status: 400 }
+      );
+    }
+
     // Check authentication
     const session = await getServerSession(authOptions);
     if (!session) {

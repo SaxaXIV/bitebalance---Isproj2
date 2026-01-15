@@ -287,9 +287,8 @@ export async function POST() {
           await prisma.food.create({ data: food });
           created++;
         }
-      } catch (e) {
-        // Skip errors
-        console.error(`Error seeding ${food.name}:`, e);
+      } catch {
+        // Skip errors (keep endpoint robust)
       }
     }
     

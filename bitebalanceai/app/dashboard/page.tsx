@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/Shell";
 import { CalorieGauge } from "@/components/dashboard/CalorieGauge";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { onMealLogged } from "@/lib/clientEvents";
 import {
   ResponsiveContainer,
   BarChart,
@@ -42,22 +43,28 @@ export default function DashboardPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [refreshKey, setRefreshKey] = React.useState(0);
 
+  const loadDashboard = React.useCallback(async () => {
+    const res = await fetch("/api/dashboard");
+    if (!res.ok) {
+      setError("Failed to load dashboard.");
+      return;
+    }
+    const j = await res.json();
+    setData(j.points ?? []);
+    setTodayCalories(j.today?.calories ?? 0);
+    setTodayProtein(j.today?.protein ?? 0);
+    setTodayCarbs(j.today?.carbs ?? 0);
+    setTodayFat(j.today?.fat ?? 0);
+    setDailyGoal(j.dailyGoal ?? 2000);
+    setRecentMeals(j.recentMeals ?? []);
+  }, []);
+
   React.useEffect(() => {
-    (async () => {
-      const res = await fetch("/api/dashboard");
-      if (!res.ok) {
-        setError("Failed to load dashboard.");
-        return;
-      }
-      const j = await res.json();
-      setData(j.points ?? []);
-      setTodayCalories(j.today?.calories ?? 0);
-      setTodayProtein(j.today?.protein ?? 0);
-      setTodayCarbs(j.today?.carbs ?? 0);
-      setTodayFat(j.today?.fat ?? 0);
-      setDailyGoal(j.dailyGoal ?? 2000);
-      setRecentMeals(j.recentMeals ?? []);
-    })();
+    loadDashboard();
+  }, [loadDashboard, refreshKey]);
+
+  React.useEffect(() => {
+    return onMealLogged(() => setRefreshKey((k) => k + 1));
   }, []);
 
   return (

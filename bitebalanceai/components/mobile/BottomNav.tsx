@@ -8,7 +8,7 @@ const navItems = [
   { href: "/foods", label: "Search", icon: "🔍" },
   { href: "/meal-logs", label: "Add", icon: "+", isAdd: true },
   { href: "/community", label: "Community", icon: "👥" },
-  { href: "/dashboard", label: "Profile", icon: "👤" },
+  { href: "/profile", label: "Profile", icon: "👤" },
 ];
 
 export function BottomNav() {

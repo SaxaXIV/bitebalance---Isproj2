@@ -6,6 +6,7 @@ import { FoodHeader } from "@/components/foods/FoodHeader";
 import { FoodResultsList } from "@/components/foods/FoodResultsList";
 import { FoodDetailPanel } from "@/components/foods/FoodDetailPanel";
 import { BottomNav } from "@/components/mobile/BottomNav";
+import { emitMealLogged } from "@/lib/clientEvents";
 
 type Food = {
   id: string;
@@ -22,6 +23,8 @@ export default function FoodsPage() {
   const [selectedCategory, setSelectedCategory] = React.useState("All");
   const [selectedMealType, setSelectedMealType] = React.useState("Breakfast");
   const [selectedSource, setSelectedSource] = React.useState<"all" | "fnri" | "ai">("all");
+  const [page, setPage] = React.useState(1);
+  const [total, setTotal] = React.useState(0);
   const [foods, setFoods] = React.useState<Food[]>([]);
   const [selectedFood, setSelectedFood] = React.useState<Food | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -34,6 +37,8 @@ export default function FoodsPage() {
     if (searchQuery) params.set("q", searchQuery);
     if (selectedCategory !== "All") params.set("category", selectedCategory);
     if (selectedSource !== "all") params.set("source", selectedSource);
+    params.set("page", String(page));
+    params.set("limit", "50");
     const res = await fetch(`/api/foods?${params.toString()}`);
     setLoading(false);
     if (!res.ok) {
@@ -43,6 +48,7 @@ export default function FoodsPage() {
     const j = await res.json();
     const items = j.items ?? [];
     setFoods(items);
+    setTotal(j.total ?? items.length);
     if (items.length > 0 && !selectedFood) {
       setSelectedFood(items[0]);
     }
@@ -51,7 +57,7 @@ export default function FoodsPage() {
   React.useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory]);
+  }, [selectedCategory, selectedSource, page]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -61,14 +67,14 @@ export default function FoodsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery]);
 
-  async function handleAddToLog(foodId: string, mealType: string) {
+  async function handleAddToLog(foodId: string, mealType: string, quantity: number) {
     const res = await fetch("/api/meal-logs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ foodId, quantity: 1, mealType }),
+      body: JSON.stringify({ foodId, quantity, mealType }),
     });
     if (res.ok) {
-      alert(`Added to ${mealType}!`);
+      emitMealLogged();
     }
   }
 
@@ -100,14 +106,21 @@ export default function FoodsPage() {
         {/* Header with Search & Filters */}
         <FoodHeader
           searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
+          onSearchChange={(q) => {
+            setSearchQuery(q);
+            setPage(1);
+          }}
           selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+          onCategoryChange={(cat) => {
+            setSelectedCategory(cat);
+            setPage(1);
+          }}
           selectedMealType={selectedMealType}
           onMealTypeChange={setSelectedMealType}
         />
 
         {error && <div className="text-sm text-red-600">{error}</div>}
+        {loading ? <div className="text-sm text-zinc-600">Loading foods...</div> : null}
 
         {/* Three Column Layout: Results List | Detail Panel */}
         <div className="grid gap-6 lg:grid-cols-[1fr,1fr]">
@@ -117,8 +130,26 @@ export default function FoodsPage() {
               foods={foods}
               onSelect={setSelectedFood}
               selectedId={selectedFood?.id}
-              title={`${foods.length} RESULTS`}
+              title={`${total} TOTAL • PAGE ${page}`}
             />
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 disabled:opacity-50"
+              >
+                Prev
+              </button>
+              <button
+                type="button"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page * 50 >= total}
+                className="rounded-md border border-zinc-200 bg-white px-3 py-1.5 text-sm text-zinc-700 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
           </div>
 
           {/* Right: Food Detail Panel */}

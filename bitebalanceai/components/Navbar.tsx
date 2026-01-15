@@ -21,20 +21,22 @@ export function Navbar() {
   return (
     <header className="border-b bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="text-sm font-semibold text-zinc-900">
+        <Link href={data?.user ? "/dashboard" : "/login"} className="text-sm font-semibold text-zinc-900">
           BiteBalanceAI
         </Link>
-        <nav className="hidden flex-wrap gap-3 md:flex">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="text-sm text-zinc-700 hover:text-zinc-900"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
+        {data?.user ? (
+          <nav className="hidden flex-wrap gap-3 md:flex">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="text-sm text-zinc-700 hover:text-zinc-900"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        ) : null}
         <div className="flex items-center gap-2">
           {data?.user ? (
             <>

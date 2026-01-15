@@ -25,7 +25,7 @@ type Props = {
   food: Food | null;
   similarFoods?: SimilarFood[];
   mealType: string;
-  onAddToLog: (foodId: string, mealType: string) => void;
+  onAddToLog: (foodId: string, mealType: string, quantity: number) => void;
 };
 
 export function FoodDetailPanel({ food, similarFoods = [], mealType, onAddToLog }: Props) {
@@ -43,6 +43,35 @@ export function FoodDetailPanel({ food, similarFoods = [], mealType, onAddToLog 
   const proteinPercent = totalMacros > 0 ? ((food.protein ?? 0) / totalMacros) * 100 : 0;
   const carbsPercent = totalMacros > 0 ? ((food.carbs ?? 0) / totalMacros) * 100 : 0;
   const fatPercent = totalMacros > 0 ? ((food.fat ?? 0) / totalMacros) * 100 : 0;
+
+  const [qty, setQty] = React.useState(1);
+  const [aiText, setAiText] = React.useState<string | null>(null);
+  const [aiLoading, setAiLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    setQty(1);
+    setAiText(null);
+  }, [food.id]);
+
+  async function analyzeImpact() {
+    if (!food) return;
+    setAiLoading(true);
+    setAiText(null);
+    const prompt = `Analyze the health impact of eating: ${food.name}. Quantity: ${qty} serving(s).\nMacros per serving: ${food.calories} kcal, protein ${(food.protein ?? 0)}g, carbs ${(food.carbs ?? 0)}g, fat ${(food.fat ?? 0)}g.\nKeep it short (3-5 bullet points) and include a note for calorie goal adherence.`;
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    setAiLoading(false);
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      setAiText(j?.error ?? "AI analysis unavailable.");
+      return;
+    }
+    const j = await res.json().catch(() => ({}));
+    setAiText(j?.response ?? "AI analysis unavailable.");
+  }
 
   return (
     <Card>
@@ -146,9 +175,43 @@ export function FoodDetailPanel({ food, similarFoods = [], mealType, onAddToLog 
 
         {/* Add to Log Button */}
         <div className="pt-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-sm font-medium text-emerald-900">Quantity</div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                className="h-9 w-9 rounded-full border border-emerald-200 bg-white text-emerald-800"
+              >
+                −
+              </button>
+              <div className="min-w-[2rem] text-center text-sm font-semibold text-emerald-900">
+                {qty}
+              </div>
+              <button
+                type="button"
+                onClick={() => setQty((q) => q + 1)}
+                className="h-9 w-9 rounded-full border border-emerald-200 bg-white text-emerald-800"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <Button variant="secondary" className="w-full" onClick={analyzeImpact} disabled={aiLoading}>
+              {aiLoading ? "Analyzing..." : "Ask Gemini: impact analysis"}
+            </Button>
+            {aiText ? (
+              <div className="mt-2 rounded-lg border border-emerald-100 bg-white p-3 text-xs text-zinc-700 whitespace-pre-wrap">
+                {aiText}
+              </div>
+            ) : null}
+          </div>
+
           <Button
             className="w-full bg-emerald-500 hover:bg-emerald-600"
-            onClick={() => onAddToLog(food.id, mealType)}
+            onClick={() => onAddToLog(food.id, mealType, qty)}
           >
             + Add to {mealType} Log
           </Button>

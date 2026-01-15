@@ -126,57 +126,14 @@ export default function MealLogsPage() {
           ))}
         </div>
 
-        {/* Search & Add Form */}
         <Card>
           <CardHeader>
-            <CardTitle>Search & Add to {activeMealType}</CardTitle>
-            <CardDescription>Find foods and add them to your meal log.</CardDescription>
+            <CardTitle>Add meals by searching</CardTitle>
+            <CardDescription>
+              Use <span className="font-semibold">➕ Add Meal</span> to search foods and log them.
+            </CardDescription>
           </CardHeader>
-
-          <form className="grid gap-3 md:grid-cols-4" onSubmit={onSubmit}>
-            <label className="block">
-              <div className="mb-1 text-sm font-medium text-zinc-900">Food</div>
-              <select
-                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
-                value={foodId}
-                onChange={(e) => setFoodId(e.target.value)}
-              >
-                {foods.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <Input
-              label="Quantity"
-              inputMode="decimal"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-            />
-
-            <label className="block">
-              <div className="mb-1 text-sm font-medium text-zinc-900">Meal type</div>
-              <select
-                className="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-zinc-400"
-                value={mealType}
-                onChange={(e) => setMealType(e.target.value as MealType)}
-              >
-                <option>Breakfast</option>
-                <option>Lunch</option>
-                <option>Dinner</option>
-              </select>
-            </label>
-
-            <div className="flex items-end">
-              <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Saving..." : "Add log"}
-              </Button>
-            </div>
-          </form>
-
-          {error ? <div className="mt-3 text-sm text-red-600">{error}</div> : null}
+          {error ? <div className="text-sm text-red-600">{error}</div> : null}
         </Card>
 
         {/* Breakfast/Lunch/Dinner Target Card */}

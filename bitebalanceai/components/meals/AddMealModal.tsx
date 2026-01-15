@@ -4,6 +4,7 @@ import * as React from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { emitMealLogged } from "@/lib/clientEvents";
 
 type Food = { id: string; name: string; calories: number };
 
@@ -30,12 +31,12 @@ export function AddMealModal({
 
   React.useEffect(() => {
     if (isOpen) {
-      loadFoods();
+      // Only load once user starts searching
     }
   }, [isOpen]);
 
   React.useEffect(() => {
-    if (isOpen && searchQuery) {
+    if (isOpen && searchQuery.trim().length >= 2) {
       const timer = setTimeout(() => {
         loadFoods();
       }, 300);
@@ -45,7 +46,7 @@ export function AddMealModal({
 
   async function loadFoods() {
     const params = new URLSearchParams();
-    if (searchQuery) params.set("q", searchQuery);
+    if (searchQuery.trim().length >= 2) params.set("q", searchQuery.trim());
     const res = await fetch(`/api/foods?${params.toString()}`);
     if (res.ok) {
       const j = await res.json();
@@ -81,6 +82,7 @@ export function AddMealModal({
       return;
     }
     onSuccess();
+    emitMealLogged();
     onClose();
     setFoodId("");
     setQuantity("1");
@@ -129,6 +131,9 @@ export function AddMealModal({
                 </option>
               ))}
             </select>
+            {foods.length === 0 ? (
+              <div className="mt-1 text-xs text-zinc-500">Type at least 2 characters to search foods.</div>
+            ) : null}
           </label>
 
           <div className="grid grid-cols-2 gap-4">

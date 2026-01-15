@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 export function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const callbackUrl = search.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = search.get("callbackUrl") ?? "/onboarding";
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -32,6 +32,13 @@ export function LoginForm() {
       return;
     }
     router.push(res.url ?? callbackUrl);
+  }
+
+  async function onGoogle() {
+    setError(null);
+    setLoading(true);
+    await signIn("google", { callbackUrl: "/onboarding" });
+    // NextAuth will redirect; keep loading state for UI
   }
 
   return (
@@ -78,17 +85,6 @@ export function LoginForm() {
               </button>
             </div>
 
-            {/* Fake reCAPTCHA */}
-            <div className="flex items-center gap-3 rounded-md bg-white px-3 py-2 text-[11px] text-emerald-800 shadow-inner">
-              <div className="flex h-4 w-4 items-center justify-center rounded border border-emerald-300 bg-emerald-50" />
-              <span>I&apos;m not a robot</span>
-              <div className="ml-auto flex items-center gap-1">
-                <div className="h-5 w-16 rounded bg-sky-100" />
-                <span className="text-[9px] text-emerald-600">Privacy</span>
-                <span className="text-[9px] text-emerald-600">Terms</span>
-              </div>
-            </div>
-
             {error && (
               <div className="text-center text-xs font-medium text-red-600">
                 {error}
@@ -111,18 +107,19 @@ export function LoginForm() {
 
             <button
               type="button"
+              onClick={onGoogle}
+              disabled={loading}
               className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg font-bold text-emerald-700 shadow-md hover:shadow-lg"
             >
               G
             </button>
 
-            <button
-              type="button"
-              onClick={() => router.push("/register")}
+            <Link
+              href="/register"
               className="mt-4 block w-full text-center text-xs font-medium text-emerald-800 hover:text-emerald-900"
             >
               Create an Account
-            </button>
+            </Link>
           </div>
         </form>
       </div>

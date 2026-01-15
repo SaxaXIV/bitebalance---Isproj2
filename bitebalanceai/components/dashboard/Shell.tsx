@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "📊" },
@@ -12,6 +12,7 @@ const navItems = [
   { href: "/community", label: "Community", icon: "👥" },
   { href: "/challenges", label: "Challenges", icon: "🏆" },
   { href: "/subscriptions", label: "Subscription", icon: "💳" },
+  { href: "/profile", label: "Profile", icon: "👤" },
 ];
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -82,6 +83,13 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               <button className="relative">
                 <span className="text-lg md:text-xl">🔔</span>
                 <span className="absolute -top-1 -right-1 h-2.5 w-2.5 md:h-3 md:w-3 rounded-full bg-red-500 border-2 border-white"></span>
+              </button>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                className="hidden sm:inline-flex rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50"
+              >
+                Logout
               </button>
               <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-emerald-200 flex items-center justify-center text-xs font-semibold text-emerald-700">
                 {session?.user?.name?.[0]?.toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || "U"}
