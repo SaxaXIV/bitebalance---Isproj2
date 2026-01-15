@@ -13,6 +13,7 @@ export function LoginForm() {
   const [googleEnabled, setGoogleEnabled] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
 
@@ -77,7 +78,7 @@ export function LoginForm() {
             />
             <div className="relative">
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 autoComplete="current-password"
                 placeholder="Password"
@@ -87,9 +88,10 @@ export function LoginForm() {
               />
               <button
                 type="button"
+                onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-4 top-1/2 -translate-y-1/2 text-emerald-400"
               >
-                👁️
+                {showPassword ? "🙈" : "👁️"}
               </button>
             </div>
             <div className="flex items-center justify-between text-[11px] text-emerald-700">
@@ -126,6 +128,11 @@ export function LoginForm() {
             >
               G
             </button>
+            {!googleEnabled ? (
+              <div className="text-center text-[11px] text-emerald-700/70">
+                Google login will be enabled after you set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel.
+              </div>
+            ) : null}
 
             <Link
               href="/register"
