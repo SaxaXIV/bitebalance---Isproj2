@@ -53,6 +53,42 @@ export async function GET() {
     fat: Math.round(v.fat),
   }));
 
-  return NextResponse.json({ points });
+  // Get today's totals
+  const todayKey = isoDay(new Date());
+  const todayData = map.get(todayKey) ?? { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+  // Get user's daily calorie goal from profile
+  const profile = await prisma.userProfile.findUnique({
+    where: { userId },
+    select: { dailyCalories: true },
+  });
+
+  const dailyGoal = profile?.dailyCalories ?? 2000;
+
+  // Get recent meals (last 5)
+  const recentLogs = await prisma.foodLog.findMany({
+    where: { userId },
+    include: { food: true },
+    orderBy: { loggedAt: "desc" },
+    take: 5,
+  });
+
+  return NextResponse.json({
+    points,
+    today: {
+      calories: Math.round(todayData.calories),
+      protein: Math.round(todayData.protein),
+      carbs: Math.round(todayData.carbs),
+      fat: Math.round(todayData.fat),
+    },
+    dailyGoal,
+    recentMeals: recentLogs.map((l) => ({
+      id: l.id,
+      foodName: l.food.name,
+      calories: Math.round(l.food.calories * l.quantity),
+      mealType: l.mealType,
+      loggedAt: l.loggedAt.toISOString(),
+    })),
+  });
 }
 

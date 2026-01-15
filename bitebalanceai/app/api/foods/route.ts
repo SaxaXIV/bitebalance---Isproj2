@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 const seedFoods = [
-  { name: "Chicken breast (100g)", calories: 165, protein: 31, carbs: 0, fat: 3.6 },
-  { name: "White rice (1 cup)", calories: 205, protein: 4.3, carbs: 45, fat: 0.4 },
-  { name: "Egg (1 large)", calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8 },
-  { name: "Banana (1 medium)", calories: 105, protein: 1.3, carbs: 27, fat: 0.4 },
+  { name: "Chicken breast (100g)", calories: 165, protein: 31, carbs: 0, fat: 3.6, source: "fnri" },
+  { name: "White rice (1 cup)", calories: 205, protein: 4.3, carbs: 45, fat: 0.4, source: "fnri" },
+  { name: "Egg (1 large)", calories: 72, protein: 6.3, carbs: 0.4, fat: 4.8, source: "fnri" },
+  { name: "Banana (1 medium)", calories: 105, protein: 1.3, carbs: 27, fat: 0.4, source: "fnri" },
 ];
 
 function num(q: string | null) {
@@ -17,6 +17,7 @@ function num(q: string | null) {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const q = (url.searchParams.get("q") ?? "").trim();
+  const source = url.searchParams.get("source") ?? null; // "fnri" or "ai"
   const minCalories = num(url.searchParams.get("minCalories"));
   const minProtein = num(url.searchParams.get("minProtein"));
   const minCarbs = num(url.searchParams.get("minCarbs"));
@@ -31,6 +32,7 @@ export async function GET(req: Request) {
     where: {
       AND: [
         q ? { name: { contains: q, mode: "insensitive" } } : {},
+        source ? { source } : {},
         minCalories != null ? { calories: { gte: minCalories } } : {},
         minProtein != null ? { protein: { gte: minProtein } } : {},
         minCarbs != null ? { carbs: { gte: minCarbs } } : {},

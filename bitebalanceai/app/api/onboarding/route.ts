@@ -8,10 +8,15 @@ export async function POST(req: Request) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json().catch(() => null);
+  const age = Number(body?.age);
+  const sex = (body?.sex ?? "").toString();
   const heightCm = Number(body?.heightCm);
   const weightKg = Number(body?.weightKg);
   const activityLevel = (body?.activityLevel ?? "").toString();
   const goal = (body?.goal ?? "").toString();
+  const dietType = (body?.dietType ?? "").toString();
+  const allergies = (body?.allergies ?? "").toString() || null;
+  const dailyCalories = Number(body?.dailyCalories);
 
   if (!Number.isFinite(heightCm) || !Number.isFinite(weightKg)) {
     return NextResponse.json({ error: "Invalid height/weight." }, { status: 400 });
@@ -21,8 +26,29 @@ export async function POST(req: Request) {
 
   await prisma.userProfile.upsert({
     where: { userId },
-    update: { heightCm, weightKg, activityLevel, goal },
-    create: { userId, heightCm, weightKg, activityLevel, goal },
+    update: {
+      age: Number.isFinite(age) ? age : null,
+      sex: sex || null,
+      heightCm,
+      weightKg,
+      activityLevel: activityLevel || null,
+      goal: goal || null,
+      dietType: dietType || null,
+      allergies: allergies || null,
+      dailyCalories: Number.isFinite(dailyCalories) ? dailyCalories : null,
+    },
+    create: {
+      userId,
+      age: Number.isFinite(age) ? age : null,
+      sex: sex || null,
+      heightCm,
+      weightKg,
+      activityLevel: activityLevel || null,
+      goal: goal || null,
+      dietType: dietType || null,
+      allergies: allergies || null,
+      dailyCalories: Number.isFinite(dailyCalories) ? dailyCalories : null,
+    },
   });
 
   return NextResponse.json({ ok: true });

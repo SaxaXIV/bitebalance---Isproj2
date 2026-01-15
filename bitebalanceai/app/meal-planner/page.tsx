@@ -125,32 +125,47 @@ export default function MealPlannerPage() {
           {weekDates.map((d, idx) => {
             const key = isoDate(d);
             const dayMeals = items.filter((m) => m.date.slice(0, 10) === key);
+            const isToday = isoDate(new Date()) === key;
             return (
-              <button
+              <div
                 key={key}
-                type="button"
-                onClick={() => setSelectedDay(idx)}
-                className={`rounded-md border p-3 text-left ${
+                className={`rounded-lg border-2 p-3 ${
                   selectedDay === idx
-                    ? "border-zinc-900 bg-zinc-50"
-                    : "border-zinc-200 bg-white"
+                    ? "border-emerald-500 bg-emerald-50"
+                    : isToday
+                      ? "border-emerald-300 bg-emerald-50/50"
+                      : "border-zinc-200 bg-white"
                 }`}
               >
-                <div className="mb-1 text-xs font-semibold text-zinc-600">
-                  {days[idx]} {key}
-                </div>
-                <div className="space-y-1 text-xs text-zinc-700">
-                  {dayMeals.map((m) => (
-                    <div key={m.id}>
-                      <span className="font-semibold">{m.mealType}:</span>{" "}
-                      {m.title}
+                <button
+                  type="button"
+                  onClick={() => setSelectedDay(idx)}
+                  className="w-full text-left"
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="text-xs font-semibold text-zinc-600">
+                      {days[idx]}
                     </div>
-                  ))}
-                  {!dayMeals.length ? (
-                    <div className="text-zinc-400">No meals yet</div>
-                  ) : null}
-                </div>
-              </button>
+                    <div className={`text-xs ${isToday ? "font-bold text-emerald-600" : "text-zinc-500"}`}>
+                      {d.getDate()}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5 min-h-[80px]">
+                    {dayMeals.map((m) => (
+                      <div
+                        key={m.id}
+                        className="rounded bg-white px-2 py-1 text-xs text-zinc-700 border border-zinc-100"
+                      >
+                        <span className="font-semibold text-emerald-600">{m.mealType}:</span>{" "}
+                        <span className="text-zinc-600">{m.title}</span>
+                      </div>
+                    ))}
+                    {!dayMeals.length && (
+                      <div className="text-xs text-zinc-400 italic">No meals planned</div>
+                    )}
+                  </div>
+                </button>
+              </div>
             );
           })}
         </div>

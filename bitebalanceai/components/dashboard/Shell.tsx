@@ -67,23 +67,23 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
         {/* Top Header */}
-        <header className="sticky top-0 z-10 border-b border-emerald-100 bg-white px-6 py-4">
+        <header className="sticky top-0 z-10 border-b border-emerald-100 bg-white px-4 py-3 md:px-6 md:py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-emerald-900 capitalize">
+            <h1 className="text-lg md:text-xl font-semibold text-emerald-900 capitalize">
               {navItems.find((item) => item.href === pathname)?.label || "Dashboard"}
             </h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 md:gap-4">
               <Link
                 href="/subscriptions"
-                className="rounded-lg border border-emerald-300 bg-white px-4 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                className="hidden sm:block rounded-lg border border-emerald-300 bg-white px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-emerald-700 hover:bg-emerald-50"
               >
                 Subscription
               </Link>
               <button className="relative">
-                <span className="text-xl">🔔</span>
-                <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+                <span className="text-lg md:text-xl">🔔</span>
+                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 md:h-3 md:w-3 rounded-full bg-red-500 border-2 border-white"></span>
               </button>
-              <div className="h-8 w-8 rounded-full bg-emerald-200 flex items-center justify-center text-xs font-semibold text-emerald-700">
+              <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-emerald-200 flex items-center justify-center text-xs font-semibold text-emerald-700">
                 {session?.user?.name?.[0]?.toUpperCase() || session?.user?.email?.[0]?.toUpperCase() || "U"}
               </div>
             </div>
@@ -91,7 +91,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto bg-emerald-50 p-6">
+        <main className="flex-1 overflow-y-auto bg-emerald-50 p-4 md:p-6">
           {children}
         </main>
       </div>

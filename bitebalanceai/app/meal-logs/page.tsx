@@ -3,6 +3,7 @@
 import * as React from "react";
 import { DashboardShell } from "@/components/dashboard/Shell";
 import { BreakfastTargetCard } from "@/components/meals/BreakfastTargetCard";
+import { AddMealModal } from "@/components/meals/AddMealModal";
 import { BottomNav } from "@/components/mobile/BottomNav";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -26,6 +27,7 @@ export default function MealLogsPage() {
   const [logs, setLogs] = React.useState<LogItem[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   async function loadFoods() {
     const res = await fetch("/api/foods");
@@ -189,6 +191,14 @@ export default function MealLogsPage() {
 
       {/* Mobile Bottom Nav */}
       <BottomNav />
+
+      {/* Add Meal Modal */}
+      <AddMealModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={loadLogs}
+        defaultMealType={activeMealType}
+      />
     </DashboardShell>
   );
 }

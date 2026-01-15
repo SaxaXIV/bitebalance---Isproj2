@@ -21,6 +21,7 @@ export default function FoodsPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("All");
   const [selectedMealType, setSelectedMealType] = React.useState("Breakfast");
+  const [selectedSource, setSelectedSource] = React.useState<"all" | "fnri" | "ai">("all");
   const [foods, setFoods] = React.useState<Food[]>([]);
   const [selectedFood, setSelectedFood] = React.useState<Food | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -32,6 +33,7 @@ export default function FoodsPage() {
     const params = new URLSearchParams();
     if (searchQuery) params.set("q", searchQuery);
     if (selectedCategory !== "All") params.set("category", selectedCategory);
+    if (selectedSource !== "all") params.set("source", selectedSource);
     const res = await fetch(`/api/foods?${params.toString()}`);
     setLoading(false);
     if (!res.ok) {
@@ -77,6 +79,24 @@ export default function FoodsPage() {
   return (
     <DashboardShell>
       <div className="space-y-6 pb-20 md:pb-6">
+        {/* Source Tabs */}
+        <div className="flex gap-2 border-b border-zinc-200">
+          {(["all", "fnri", "ai"] as const).map((source) => (
+            <button
+              key={source}
+              type="button"
+              onClick={() => setSelectedSource(source)}
+              className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors capitalize ${
+                selectedSource === source
+                  ? "border-emerald-500 text-emerald-900"
+                  : "border-transparent text-zinc-600 hover:text-zinc-900"
+              }`}
+            >
+              {source === "all" ? "All Foods" : source === "fnri" ? "FNRI Foods" : "AI-Generated"}
+            </button>
+          ))}
+        </div>
+
         {/* Header with Search & Filters */}
         <FoodHeader
           searchQuery={searchQuery}

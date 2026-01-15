@@ -3,9 +3,11 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { PasswordStrength } from "@/components/ui/PasswordStrength";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -30,50 +32,83 @@ export default function RegisterPage() {
       setError(j?.error ?? "Failed to register.");
       return;
     }
-    router.push("/login");
+    // Auto-login after registration and redirect to onboarding
+    const signInRes = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    });
+    if (signInRes && !signInRes.error) {
+      router.push("/onboarding");
+    } else {
+      router.push("/login");
+    }
   }
 
   return (
-    <div className="mx-auto max-w-md">
-      <Card>
-        <CardHeader>
-          <CardTitle>Register</CardTitle>
-          <CardDescription>Create an account to start logging meals.</CardDescription>
-        </CardHeader>
-        <form className="grid gap-3" onSubmit={onSubmit}>
-          <Input
-            label="Name (optional)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            label="Email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            label="Password"
-            type="password"
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error ? <div className="text-sm text-red-600">{error}</div> : null}
-          <Button type="submit" disabled={loading}>
-            {loading ? "Creating..." : "Create account"}
-          </Button>
-          <div className="text-sm text-zinc-600">
-            Already have an account?{" "}
-            <Link className="text-zinc-900 underline" href="/login">
-              Login
-            </Link>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-emerald-300 via-emerald-200 to-emerald-100 px-4">
+      <div className="w-full max-w-md space-y-6">
+        <h1 className="text-center text-4xl font-bold tracking-tight text-emerald-900">
+          Bite Balance
+        </h1>
+
+        <form
+          onSubmit={onSubmit}
+          className="rounded-[32px] bg-lime-100/90 p-8 shadow-xl shadow-emerald-300/40"
+        >
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Name (optional)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="h-11 w-full rounded-full border-none bg-white px-4 text-sm text-emerald-900 shadow-inner outline-none placeholder:text-emerald-400 focus:ring-2 focus:ring-emerald-400"
+            />
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="h-11 w-full rounded-full border-none bg-white px-4 text-sm text-emerald-900 shadow-inner outline-none placeholder:text-emerald-400 focus:ring-2 focus:ring-emerald-400"
+            />
+            <div className="space-y-2">
+              <input
+                type="password"
+                required
+                autoComplete="new-password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11 w-full rounded-full border-none bg-white px-4 text-sm text-emerald-900 shadow-inner outline-none placeholder:text-emerald-400 focus:ring-2 focus:ring-emerald-400"
+              />
+              <PasswordStrength password={password} />
+            </div>
+
+            {error && (
+              <div className="text-center text-xs font-medium text-red-600">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 flex h-11 w-full items-center justify-center rounded-full bg-lime-400 text-sm font-semibold text-emerald-900 shadow-md shadow-lime-300 transition-colors hover:bg-lime-300 disabled:opacity-60"
+            >
+              {loading ? "Creating..." : "Create account"}
+            </button>
+
+            <div className="text-center text-xs text-emerald-800">
+              Already have an account?{" "}
+              <Link className="font-medium hover:text-emerald-900" href="/login">
+                Login
+              </Link>
+            </div>
           </div>
         </form>
-      </Card>
+      </div>
     </div>
   );
 }

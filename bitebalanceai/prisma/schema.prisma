@@ -31,10 +31,15 @@ model User {
 model UserProfile {
   id            String   @id @default(cuid())
   userId        String   @unique
+  age           Int?
+  sex           String?  // "male", "female", "other"
   heightCm      Float?
   weightKg      Float?
-  activityLevel String?
-  goal          String?
+  activityLevel String?  // "low", "moderate", "high"
+  goal          String?  // "lose", "maintain", "gain"
+  dietType      String?  // "balanced", "keto", "vegan", "vegetarian", "low-carb"
+  allergies     String?  // JSON array or comma-separated
+  dailyCalories Int?     // Calculated daily calorie goal
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -48,6 +53,7 @@ model Food {
   carbs       Float?
   fat         Float?
   fiber       Float?
+  source      String    @default("fnri") // "fnri" or "ai"
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   foodLogs    FoodLog[]
