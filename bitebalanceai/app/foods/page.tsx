@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
-import { Input } from "@/components/ui/Input";
-import { Table, THead, TH, TD } from "@/components/ui/Table";
-import { Button } from "@/components/ui/Button";
+import { DashboardShell } from "@/components/dashboard/Shell";
+import { FoodHeader } from "@/components/foods/FoodHeader";
+import { FoodResultsList } from "@/components/foods/FoodResultsList";
+import { FoodDetailPanel } from "@/components/foods/FoodDetailPanel";
+import { BottomNav } from "@/components/mobile/BottomNav";
 
 type Food = {
   id: string;
@@ -13,15 +14,15 @@ type Food = {
   protein: number | null;
   carbs: number | null;
   fat: number | null;
+  category?: string;
 };
 
 export default function FoodsPage() {
-  const [q, setQ] = React.useState("");
-  const [minCalories, setMinCalories] = React.useState("");
-  const [minProtein, setMinProtein] = React.useState("");
-  const [minCarbs, setMinCarbs] = React.useState("");
-  const [minFat, setMinFat] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedCategory, setSelectedCategory] = React.useState("All");
+  const [selectedMealType, setSelectedMealType] = React.useState("Breakfast");
   const [foods, setFoods] = React.useState<Food[]>([]);
+  const [selectedFood, setSelectedFood] = React.useState<Food | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -29,11 +30,8 @@ export default function FoodsPage() {
     setLoading(true);
     setError(null);
     const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    if (minCalories) params.set("minCalories", minCalories);
-    if (minProtein) params.set("minProtein", minProtein);
-    if (minCarbs) params.set("minCarbs", minCarbs);
-    if (minFat) params.set("minFat", minFat);
+    if (searchQuery) params.set("q", searchQuery);
+    if (selectedCategory !== "All") params.set("category", selectedCategory);
     const res = await fetch(`/api/foods?${params.toString()}`);
     setLoading(false);
     if (!res.ok) {
@@ -41,84 +39,83 @@ export default function FoodsPage() {
       return;
     }
     const j = await res.json();
-    setFoods(j.items ?? []);
+    const items = j.items ?? [];
+    setFoods(items);
+    if (items.length > 0 && !selectedFood) {
+      setSelectedFood(items[0]);
+    }
   }
 
   React.useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedCategory]);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery) load();
+    }, 300);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery]);
+
+  async function handleAddToLog(foodId: string, mealType: string) {
+    const res = await fetch("/api/meal-logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ foodId, quantity: 1, mealType }),
+    });
+    if (res.ok) {
+      alert(`Added to ${mealType}!`);
+    }
+  }
+
+  const similarFoods = foods
+    .filter((f) => f.id !== selectedFood?.id && f.category === selectedFood?.category)
+    .slice(0, 5);
 
   return (
-    <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Food Database</CardTitle>
-          <CardDescription>Search and filter foods (FNRI + AI-generated).</CardDescription>
-        </CardHeader>
+    <DashboardShell>
+      <div className="space-y-6 pb-20 md:pb-6">
+        {/* Header with Search & Filters */}
+        <FoodHeader
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
+          selectedMealType={selectedMealType}
+          onMealTypeChange={setSelectedMealType}
+        />
 
-        <div className="grid gap-3">
-          <div className="grid gap-3 md:grid-cols-5">
-            <Input label="Search" value={q} onChange={(e) => setQ(e.target.value)} />
-            <Input label="Min calories" inputMode="numeric" value={minCalories} onChange={(e) => setMinCalories(e.target.value)} />
-            <Input label="Min protein" inputMode="numeric" value={minProtein} onChange={(e) => setMinProtein(e.target.value)} />
-            <Input label="Min carbs" inputMode="numeric" value={minCarbs} onChange={(e) => setMinCarbs(e.target.value)} />
-            <Input label="Min fat" inputMode="numeric" value={minFat} onChange={(e) => setMinFat(e.target.value)} />
+        {error && <div className="text-sm text-red-600">{error}</div>}
+
+        {/* Three Column Layout: Results List | Detail Panel */}
+        <div className="grid gap-6 lg:grid-cols-[1fr,1fr]">
+          {/* Left: Food Results List */}
+          <div className="order-2 lg:order-1">
+            <FoodResultsList
+              foods={foods}
+              onSelect={setSelectedFood}
+              selectedId={selectedFood?.id}
+              title={`${foods.length} RESULTS`}
+            />
           </div>
-          <div className="flex gap-2">
-            <Button onClick={load} disabled={loading}>
-              {loading ? "Loading..." : "Apply"}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setQ("");
-                setMinCalories("");
-                setMinProtein("");
-                setMinCarbs("");
-                setMinFat("");
-                setTimeout(load, 0);
-              }}
-            >
-              Clear
-            </Button>
+
+          {/* Right: Food Detail Panel */}
+          <div className="order-1 lg:order-2">
+            <FoodDetailPanel
+              food={selectedFood}
+              similarFoods={similarFoods}
+              mealType={selectedMealType}
+              onAddToLog={handleAddToLog}
+            />
           </div>
-          {error ? <div className="text-sm text-red-600">{error}</div> : null}
         </div>
-      </Card>
+      </div>
 
-      <Card>
-        <Table>
-          <THead>
-            <tr>
-              <TH>Name</TH>
-              <TH>Calories</TH>
-              <TH>Protein</TH>
-              <TH>Carbs</TH>
-              <TH>Fat</TH>
-            </tr>
-          </THead>
-          <tbody>
-            {foods.map((f) => (
-              <tr key={f.id} className="border-b">
-                <TD className="font-medium text-zinc-900">{f.name}</TD>
-                <TD>{f.calories}</TD>
-                <TD>{f.protein ?? "-"}</TD>
-                <TD>{f.carbs ?? "-"}</TD>
-                <TD>{f.fat ?? "-"}</TD>
-              </tr>
-            ))}
-            {!foods.length ? (
-              <tr>
-                <TD colSpan={5} className="py-6 text-center text-zinc-600">
-                  No foods found.
-                </TD>
-              </tr>
-            ) : null}
-          </tbody>
-        </Table>
-      </Card>
-    </div>
+      {/* Mobile Bottom Nav */}
+      <BottomNav />
+    </DashboardShell>
   );
 }
 

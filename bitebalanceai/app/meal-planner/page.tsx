@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { DashboardShell } from "@/components/dashboard/Shell";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -88,7 +89,8 @@ export default function MealPlannerPage() {
   });
 
   return (
-    <div className="grid gap-6">
+    <DashboardShell>
+      <div className="grid gap-6">
       <Card>
         <CardHeader>
           <CardTitle>Meal Planner</CardTitle>
@@ -184,6 +186,7 @@ export default function MealPlannerPage() {
         {error ? <div className="mt-2 text-sm text-red-600">{error}</div> : null}
       </Card>
     </div>
+    </DashboardShell>
   );
 }
 
