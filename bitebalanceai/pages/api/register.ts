@@ -1,27 +1,6 @@
-import { NextResponse } from "next/server";
+import type { NextApiRequest, NextApiResponse } from "next";
 import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
-
-function corsHeaders(req: Request) {
-  const origin = req.headers.get("origin") ?? "*";
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Allow-Credentials": "true",
-  };
-}
-
-export async function OPTIONS(req: Request) {
-  return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
-}
-
-export async function GET(req: Request) {
-  return NextResponse.json(
-    { error: "Method Not Allowed" },
-    { status: 405, headers: corsHeaders(req) }
-  );
-}
 
 function calcDailyCalories(opts: {
   age: number;
@@ -32,7 +11,6 @@ function calcDailyCalories(opts: {
   goal: string;
 }) {
   const { age, sex, heightCm, weightKg, activityLevel, goal } = opts;
-  // Mifflin-St Jeor
   let bmr = 10 * weightKg + 6.25 * heightCm - 5 * age;
   bmr += sex === "male" ? 5 : -161;
 
@@ -55,9 +33,22 @@ function calcDailyCalories(opts: {
   return Math.round(tdee + (adjust[goal] ?? 0));
 }
 
-export async function POST(req: Request) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === "OPTIONS") {
+    res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.status(204).end();
+    return;
+  }
+
+  if (req.method !== "POST") {
+    res.status(405).json({ error: "Method Not Allowed" });
+    return;
+  }
+
   try {
-    const body = await req.json().catch(() => null);
+    const body = req.body ?? {};
     const fullName = (body?.fullName ?? body?.name ?? "").toString().trim() || null;
     const username = (body?.username ?? "").toString().trim().toLowerCase() || null;
     const email = (body?.email ?? "").toString().trim().toLowerCase();
@@ -76,31 +67,31 @@ export async function POST(req: Request) {
     const allergies = (body?.allergies ?? "").toString().trim() || null;
 
     if (!fullName || !email || !password) {
-      return NextResponse.json(
-        { error: "Full name, email and password are required." },
-        { status: 400, headers: corsHeaders(req) }
-      );
+      res.status(400).json({ error: "Full name, email and password are required." });
+      return;
     }
     if (!username) {
-      return NextResponse.json({ error: "Username is required." }, { status: 400, headers: corsHeaders(req) });
+      res.status(400).json({ error: "Username is required." });
+      return;
     }
     if (password !== confirmPassword) {
-      return NextResponse.json({ error: "Passwords do not match." }, { status: 400, headers: corsHeaders(req) });
+      res.status(400).json({ error: "Passwords do not match." });
+      return;
     }
     if (password.length < 8) {
-      return NextResponse.json(
-        { error: "Password must be at least 8 characters." },
-        { status: 400, headers: corsHeaders(req) }
-      );
+      res.status(400).json({ error: "Password must be at least 8 characters." });
+      return;
     }
 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) {
-      return NextResponse.json({ error: "Email already in use." }, { status: 409, headers: corsHeaders(req) });
+      res.status(409).json({ error: "Email already in use." });
+      return;
     }
     const usernameExists = await prisma.user.findFirst({ where: { username } });
     if (usernameExists) {
-      return NextResponse.json({ error: "Username already in use." }, { status: 409, headers: corsHeaders(req) });
+      res.status(409).json({ error: "Username already in use." });
+      return;
     }
 
     const hash = await bcrypt.hash(password, 10);
@@ -157,11 +148,9 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ ok: true }, { headers: corsHeaders(req) });
+    res.status(200).json({ ok: true });
   } catch (err: any) {
-    // Most common production cause: DB not migrated yet (missing username/address columns)
-    const msg = err?.message ? String(err.message) : "Registration failed.";
-    return NextResponse.json({ error: msg }, { status: 500, headers: corsHeaders(req) });
+    res.status(500).json({ error: err?.message ? String(err.message) : "Registration failed." });
   }
 }
 
