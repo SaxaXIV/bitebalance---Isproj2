@@ -1,6 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import bcrypt from "bcrypt";
-import { prisma } from "@/lib/prisma";
 
 function calcDailyCalories(opts: {
   age: number;
@@ -60,6 +58,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    if (!process.env.DATABASE_URL) {
+      res.status(500).json({ error: "Missing DATABASE_URL in environment." });
+      return;
+    }
+
+    const [{ default: bcrypt }, { prisma }] = await Promise.all([
+      import("bcrypt"),
+      import("../../lib/prisma"),
+    ]);
+
     const body = req.body ?? {};
     const fullName = (body?.fullName ?? body?.name ?? "").toString().trim() || null;
     const username = (body?.username ?? "").toString().trim().toLowerCase() || null;
