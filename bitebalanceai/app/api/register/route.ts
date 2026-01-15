@@ -35,101 +35,106 @@ function calcDailyCalories(opts: {
 }
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => null);
-  const fullName = (body?.fullName ?? body?.name ?? "").toString().trim() || null;
-  const username = (body?.username ?? "").toString().trim().toLowerCase() || null;
-  const email = (body?.email ?? "").toString().trim().toLowerCase();
-  const password = (body?.password ?? "").toString();
-  const confirmPassword = (body?.confirmPassword ?? "").toString();
+  try {
+    const body = await req.json().catch(() => null);
+    const fullName = (body?.fullName ?? body?.name ?? "").toString().trim() || null;
+    const username = (body?.username ?? "").toString().trim().toLowerCase() || null;
+    const email = (body?.email ?? "").toString().trim().toLowerCase();
+    const password = (body?.password ?? "").toString();
+    const confirmPassword = (body?.confirmPassword ?? "").toString();
 
-  const address = (body?.address ?? "").toString().trim() || null;
-  const cityCountry = (body?.cityCountry ?? "").toString().trim() || null;
-  const age = Number(body?.age);
-  const sex = (body?.sex ?? body?.gender ?? "").toString().trim().toLowerCase();
-  const heightCm = Number(body?.heightCm);
-  const weightKg = Number(body?.weightKg);
-  const activityLevel = (body?.activityLevel ?? "").toString().trim().toLowerCase();
-  const goal = (body?.goal ?? "").toString().trim().toLowerCase();
-  const dietType = (body?.dietType ?? body?.dietaryPreference ?? "").toString().trim() || null;
-  const allergies = (body?.allergies ?? "").toString().trim() || null;
+    const address = (body?.address ?? "").toString().trim() || null;
+    const cityCountry = (body?.cityCountry ?? "").toString().trim() || null;
+    const age = Number(body?.age);
+    const sex = (body?.sex ?? body?.gender ?? "").toString().trim().toLowerCase();
+    const heightCm = Number(body?.heightCm);
+    const weightKg = Number(body?.weightKg);
+    const activityLevel = (body?.activityLevel ?? "").toString().trim().toLowerCase();
+    const goal = (body?.goal ?? "").toString().trim().toLowerCase();
+    const dietType = (body?.dietType ?? body?.dietaryPreference ?? "").toString().trim() || null;
+    const allergies = (body?.allergies ?? "").toString().trim() || null;
 
-  if (!fullName || !email || !password) {
-    return NextResponse.json({ error: "Full name, email and password are required." }, { status: 400 });
-  }
-  if (!username) {
-    return NextResponse.json({ error: "Username is required." }, { status: 400 });
-  }
-  if (password !== confirmPassword) {
-    return NextResponse.json({ error: "Passwords do not match." }, { status: 400 });
-  }
-  if (password.length < 8) {
-    return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
-  }
+    if (!fullName || !email || !password) {
+      return NextResponse.json({ error: "Full name, email and password are required." }, { status: 400 });
+    }
+    if (!username) {
+      return NextResponse.json({ error: "Username is required." }, { status: 400 });
+    }
+    if (password !== confirmPassword) {
+      return NextResponse.json({ error: "Passwords do not match." }, { status: 400 });
+    }
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Password must be at least 8 characters." }, { status: 400 });
+    }
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) {
-    return NextResponse.json({ error: "Email already in use." }, { status: 409 });
-  }
-  const usernameExists = await prisma.user.findFirst({ where: { username } });
-  if (usernameExists) {
-    return NextResponse.json({ error: "Username already in use." }, { status: 409 });
-  }
+    const exists = await prisma.user.findUnique({ where: { email } });
+    if (exists) {
+      return NextResponse.json({ error: "Email already in use." }, { status: 409 });
+    }
+    const usernameExists = await prisma.user.findFirst({ where: { username } });
+    if (usernameExists) {
+      return NextResponse.json({ error: "Username already in use." }, { status: 409 });
+    }
 
-  const hash = await bcrypt.hash(password, 10);
-  const user = await prisma.user.create({
-    data: { email, password: hash, name: fullName, username },
-  });
-
-  // If personal details exist, create profile now (so onboarding can be skipped)
-  const hasProfileBasics =
-    Number.isFinite(age) &&
-    !!sex &&
-    Number.isFinite(heightCm) &&
-    Number.isFinite(weightKg) &&
-    !!activityLevel &&
-    !!goal;
-
-  if (hasProfileBasics) {
-    const dailyCalories = calcDailyCalories({
-      age,
-      sex,
-      heightCm,
-      weightKg,
-      activityLevel,
-      goal,
+    const hash = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: { email, password: hash, name: fullName, username },
     });
-    await prisma.userProfile.upsert({
-      where: { userId: user.id },
-      update: {
-        address,
-        cityCountry,
+
+    const hasProfileBasics =
+      Number.isFinite(age) &&
+      !!sex &&
+      Number.isFinite(heightCm) &&
+      Number.isFinite(weightKg) &&
+      !!activityLevel &&
+      !!goal;
+
+    if (hasProfileBasics) {
+      const dailyCalories = calcDailyCalories({
         age,
         sex,
         heightCm,
         weightKg,
         activityLevel,
         goal,
-        dietType,
-        allergies,
-        dailyCalories,
-      },
-      create: {
-        userId: user.id,
-        address,
-        cityCountry,
-        age,
-        sex,
-        heightCm,
-        weightKg,
-        activityLevel,
-        goal,
-        dietType,
-        allergies,
-        dailyCalories,
-      },
-    });
-  }
+      });
+      await prisma.userProfile.upsert({
+        where: { userId: user.id },
+        update: {
+          address,
+          cityCountry,
+          age,
+          sex,
+          heightCm,
+          weightKg,
+          activityLevel,
+          goal,
+          dietType,
+          allergies,
+          dailyCalories,
+        },
+        create: {
+          userId: user.id,
+          address,
+          cityCountry,
+          age,
+          sex,
+          heightCm,
+          weightKg,
+          activityLevel,
+          goal,
+          dietType,
+          allergies,
+          dailyCalories,
+        },
+      });
+    }
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    // Most common production cause: DB not migrated yet (missing username/address columns)
+    const msg = err?.message ? String(err.message) : "Registration failed.";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 

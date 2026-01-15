@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
+import { getProviders, signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export function LoginForm() {
@@ -10,10 +10,18 @@ export function LoginForm() {
   const search = useSearchParams();
   const callbackUrl = search.get("callbackUrl") ?? "/onboarding";
 
+  const [googleEnabled, setGoogleEnabled] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    (async () => {
+      const providers = await getProviders().catch(() => null);
+      setGoogleEnabled(Boolean(providers && (providers as any).google));
+    })();
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,6 +45,11 @@ export function LoginForm() {
   async function onGoogle() {
     setError(null);
     setLoading(true);
+    if (!googleEnabled) {
+      setLoading(false);
+      setError("Google login is not configured yet.");
+      return;
+    }
     await signIn("google", { callbackUrl: "/onboarding" });
     // NextAuth will redirect; keep loading state for UI
   }
@@ -108,7 +121,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={onGoogle}
-              disabled={loading}
+              disabled={loading || !googleEnabled}
               className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white text-lg font-bold text-emerald-700 shadow-md hover:shadow-lg"
             >
               G
