@@ -34,6 +34,7 @@ function calcDailyCalories(opts: {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  res.setHeader("Allow", "POST, OPTIONS");
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");

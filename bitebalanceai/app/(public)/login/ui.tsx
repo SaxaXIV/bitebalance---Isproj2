@@ -128,11 +128,6 @@ export function LoginForm() {
             >
               G
             </button>
-            {!googleEnabled ? (
-              <div className="text-center text-[11px] text-emerald-700/70">
-                Google login will be enabled after you set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel.
-              </div>
-            ) : null}
 
             <Link
               href="/register"
