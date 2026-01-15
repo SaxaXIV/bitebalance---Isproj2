@@ -35,6 +35,17 @@ function calcDailyCalories(opts: {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   res.setHeader("Allow", "POST, OPTIONS");
+  // Helpful sanity check: if you visit /api/register in browser, you should see this JSON.
+  if (req.method === "GET") {
+    res.status(200).json({
+      ok: true,
+      handler: "pages/api/register.ts",
+      allow: "POST, OPTIONS",
+      time: new Date().toISOString(),
+    });
+    return;
+  }
+
   if (req.method === "OPTIONS") {
     res.setHeader("Access-Control-Allow-Origin", req.headers.origin ?? "*");
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -44,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method !== "POST") {
-    res.status(405).json({ error: "Method Not Allowed" });
+    res.status(405).json({ error: "Method Not Allowed", method: req.method });
     return;
   }
 
@@ -149,6 +160,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    res.setHeader("X-Register-Handler", "pages-api");
     res.status(200).json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err?.message ? String(err.message) : "Registration failed." });
