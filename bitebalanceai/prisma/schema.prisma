@@ -15,6 +15,7 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
+  username      String?   @unique
   name          String?
   password      String
   profile       UserProfile?
@@ -31,13 +32,15 @@ model User {
 model UserProfile {
   id            String   @id @default(cuid())
   userId        String   @unique
+  address       String?
+  cityCountry   String?
   age           Int?
   sex           String?  // "male", "female", "other"
   heightCm      Float?
   weightKg      Float?
   activityLevel String?  // "low", "moderate", "high"
   goal          String?  // "lose", "maintain", "gain"
-  dietType      String?  // "balanced", "keto", "vegan", "vegetarian", "low-carb"
+  dietType      String?  // "balanced", "keto", "vegan", "vegetarian", "low-carb" or free-form
   allergies     String?  // JSON array or comma-separated
   dailyCalories Int?     // Calculated daily calorie goal
   createdAt     DateTime @default(now())
