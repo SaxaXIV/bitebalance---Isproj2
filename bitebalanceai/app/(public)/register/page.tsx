@@ -111,8 +111,15 @@ export default function RegisterPage() {
 
     setLoading(false);
     if (!res.ok) {
-      const j = await res.json().catch(() => ({}));
-      setError(j?.error ?? "Failed to register.");
+      // Prefer JSON error, but fall back to raw text so we can see Vercel/Prisma errors.
+      const contentType = res.headers.get("content-type") ?? "";
+      if (contentType.includes("application/json")) {
+        const j = await res.json().catch(() => ({}));
+        setError(j?.error ?? `Failed to register (HTTP ${res.status}).`);
+      } else {
+        const t = await res.text().catch(() => "");
+        setError(t ? `Failed to register (HTTP ${res.status}): ${t}` : `Failed to register (HTTP ${res.status}).`);
+      }
       return;
     }
 
