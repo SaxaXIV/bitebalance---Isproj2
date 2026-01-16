@@ -1,17 +1,52 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Table, THead, TH, TD } from "@/components/ui/Table";
 import { Button } from "@/components/ui/Button";
 
 export default function AdminPage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [users, setUsers] = React.useState<any[]>([]);
   const [posts, setPosts] = React.useState<any[]>([]);
   const [error, setError] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [seedLoading, setSeedLoading] = React.useState(false);
   const [seedResult, setSeedResult] = React.useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = React.useState<boolean | null>(null);
+  const [authChecking, setAuthChecking] = React.useState(true);
+  
+  // Check authentication and admin status on mount
+  React.useEffect(() => {
+    if (status === "loading") return; // Still loading session
+    
+    // If not authenticated, redirect to login
+    if (!session) {
+      router.push("/login?callbackUrl=/admin");
+      return;
+    }
+    
+    // Check if user is admin
+    fetch("/api/admin/check")
+      .then((res) => res.json())
+      .then((data) => {
+        setAuthChecking(false);
+        if (!data.isAdmin) {
+          // User is not admin, redirect to dashboard
+          router.push("/dashboard");
+        } else {
+          setIsAdmin(true);
+        }
+      })
+      .catch(() => {
+        setAuthChecking(false);
+        // If check fails, redirect to login
+        router.push("/login?callbackUrl=/admin");
+      });
+  }, [session, status, router]);
   
   // Food form state
   const [foodForm, setFoodForm] = React.useState({
@@ -52,8 +87,11 @@ export default function AdminPage() {
   }
 
   React.useEffect(() => {
-    load();
-  }, []);
+    // Only load data if user is authenticated and is admin
+    if (isAdmin === true) {
+      load();
+    }
+  }, [isAdmin]);
 
   async function deletePost(id: string) {
     if (!confirm("Are you sure you want to delete this post?")) return;
@@ -167,6 +205,23 @@ export default function AdminPage() {
     } finally {
       setSeedLoading(false);
     }
+  }
+
+  // Show loading state while checking authentication
+  if (status === "loading" || authChecking || isAdmin === null) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
+          <p className="mt-4 text-sm text-zinc-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not admin, don't render (redirect will happen)
+  if (isAdmin === false || !session) {
+    return null;
   }
 
   return (

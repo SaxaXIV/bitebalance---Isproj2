@@ -78,6 +78,21 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // If not authenticated and trying to access /admin → redirect to login
+  if (!isAuthed && pathname === "/admin") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("callbackUrl", "/admin");
+    return NextResponse.redirect(url);
+  }
+
+  // If authenticated but not admin and trying to access /admin → redirect to dashboard
+  if (isAuthed && !userIsAdmin && pathname === "/admin") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/dashboard";
+    return NextResponse.redirect(url);
+  }
+
   // If authed and visiting login/register → redirect based on admin status
   if (isAuthed && (pathname === "/login" || pathname === "/register")) {
     const url = req.nextUrl.clone();
