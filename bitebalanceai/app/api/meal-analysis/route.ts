@@ -69,8 +69,8 @@ Total servings: ${totalServings || 1}
 Provide your analysis in the requested JSON format.`;
 
     const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
-    const response = await result.response;
+    const aiResult = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
+    const response = await aiResult.response;
     let text = response.text();
 
     // Try to extract JSON from the response
@@ -94,7 +94,7 @@ Provide your analysis in the requested JSON format.`;
     // Fallback: parse text response manually
     const lines = text.split("\n").map((l: string) => l.trim()).filter(Boolean);
     let cause = "Meal composition analyzed.";
-    let result = "This meal provides energy and nutrients to support your daily activities.";
+    let resultText = "This meal provides energy and nutrients to support your daily activities.";
 
     // Try to find cause and result in text
     for (let i = 0; i < lines.length; i++) {
@@ -102,12 +102,12 @@ Provide your analysis in the requested JSON format.`;
         cause = lines[i + 1] || cause;
       }
       if (lines[i].toLowerCase().includes("result") || lines[i].toLowerCase().includes("impact")) {
-        result = (lines[i + 1] || "") + " " + (lines[i + 2] || "");
+        resultText = (lines[i + 1] || "") + " " + (lines[i + 2] || "");
         break;
       }
     }
 
-    return NextResponse.json({ cause, result });
+    return NextResponse.json({ cause, result: resultText });
   } catch (error: any) {
     console.error("Meal analysis API error:", error);
     return NextResponse.json(
