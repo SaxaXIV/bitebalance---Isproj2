@@ -12,7 +12,16 @@ export default function Home() {
   useEffect(() => {
     if (status === "loading") return; // Still loading
     if (session) {
-      router.push("/dashboard");
+      // Check if user is admin via API
+      fetch("/api/admin/check")
+        .then((res) => res.json())
+        .then((data) => {
+          router.push(data.isAdmin ? "/admin" : "/dashboard");
+        })
+        .catch(() => {
+          // Fallback to dashboard if check fails
+          router.push("/dashboard");
+        });
     } else {
       router.push("/login");
     }

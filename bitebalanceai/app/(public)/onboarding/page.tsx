@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -23,7 +24,22 @@ const ALLERGIES_OPTIONS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [step, setStep] = React.useState<Step>(1);
+  
+  // Check if user is admin and redirect
+  React.useEffect(() => {
+    async function checkAdmin() {
+      if (session?.user?.email) {
+        const res = await fetch("/api/admin/check");
+        const data = await res.json();
+        if (data.isAdmin) {
+          router.push("/admin");
+        }
+      }
+    }
+    checkAdmin();
+  }, [session, router]);
   const [age, setAge] = React.useState("");
   const [sex, setSex] = React.useState("");
   const [heightCm, setHeightCm] = React.useState("");

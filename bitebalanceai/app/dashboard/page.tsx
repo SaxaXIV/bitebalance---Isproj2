@@ -2,61 +2,68 @@
 
 import * as React from "react";
 import { DashboardShell } from "@/components/dashboard/Shell";
-import { CalorieGauge } from "@/components/dashboard/CalorieGauge";
-import { QuickActions } from "@/components/dashboard/QuickActions";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
+import { TodaysBalanceCard } from "@/components/dashboard/TodaysBalanceCard";
+import { NutritionBreakdown } from "@/components/dashboard/NutritionBreakdown";
+import { QuickActionCards } from "@/components/dashboard/QuickActionCards";
+import { RightSidebar } from "@/components/dashboard/RightSidebar";
+import { DailyHealthImpact } from "@/components/dashboard/DailyHealthImpact";
 import { onMealLogged } from "@/lib/clientEvents";
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
 
-type Point = {
-  date: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-};
-
-type RecentMeal = {
-  id: string;
-  foodName: string;
-  calories: number;
-  mealType: string;
-  loggedAt: string;
+type DashboardData = {
+  points: Array<{
+    date: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  }>;
+  today: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
+  dailyGoal: number;
+  recentMeals: Array<{
+    id: string;
+    foodName: string;
+    calories: number;
+    mealType: string;
+    loggedAt: string;
+  }>;
 };
 
 export default function DashboardPage() {
-  const [data, setData] = React.useState<Point[]>([]);
-  const [todayCalories, setTodayCalories] = React.useState(0);
-  const [todayProtein, setTodayProtein] = React.useState(0);
-  const [todayCarbs, setTodayCarbs] = React.useState(0);
-  const [todayFat, setTodayFat] = React.useState(0);
-  const [dailyGoal, setDailyGoal] = React.useState(2000);
-  const [recentMeals, setRecentMeals] = React.useState<RecentMeal[]>([]);
+  const [data, setData] = React.useState<DashboardData | null>(null);
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [refreshKey, setRefreshKey] = React.useState(0);
 
   const loadDashboard = React.useCallback(async () => {
-    const res = await fetch("/api/dashboard");
-    if (!res.ok) {
-      setError("Failed to load dashboard.");
-      return;
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch("/api/dashboard");
+      if (!res.ok) {
+        throw new Error("Failed to load dashboard");
+      }
+      const j = await res.json();
+      setData({
+        points: j.points ?? [],
+        today: {
+          calories: j.today?.calories ?? 0,
+          protein: j.today?.protein ?? 0,
+          carbs: j.today?.carbs ?? 0,
+          fat: j.today?.fat ?? 0,
+        },
+        dailyGoal: j.dailyGoal ?? 2000,
+        recentMeals: j.recentMeals ?? [],
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load dashboard");
+    } finally {
+      setLoading(false);
     }
-    const j = await res.json();
-    setData(j.points ?? []);
-    setTodayCalories(j.today?.calories ?? 0);
-    setTodayProtein(j.today?.protein ?? 0);
-    setTodayCarbs(j.today?.carbs ?? 0);
-    setTodayFat(j.today?.fat ?? 0);
-    setDailyGoal(j.dailyGoal ?? 2000);
-    setRecentMeals(j.recentMeals ?? []);
   }, []);
 
   React.useEffect(() => {
@@ -64,98 +71,118 @@ export default function DashboardPage() {
   }, [loadDashboard, refreshKey]);
 
   React.useEffect(() => {
-    return onMealLogged(() => setRefreshKey((k) => k + 1));
+    return onMealLogged(() => {
+      setRefreshKey((k) => k + 1);
+    });
   }, []);
+
+  // Calculate remaining calories
+  const remaining = React.useMemo(() => {
+    if (!data) return 0;
+    return Math.max(data.dailyGoal - data.today.calories, 0);
+  }, [data]);
+
+  // Check if food has been logged
+  const hasFoodLogged = React.useMemo(() => {
+    return data ? data.today.calories > 0 : false;
+  }, [data]);
+
+  // Calculate macro goals based on daily calorie goal
+  // Typical split: 30% protein, 30% fat, 40% carbs
+  const macroGoals = React.useMemo(() => {
+    if (!data) return { protein: 150, fat: 65, carbs: 200 };
+    const dailyCal = data.dailyGoal;
+    return {
+      protein: Math.round((dailyCal * 0.3) / 4), // 30% of calories, 4 cal/g
+      fat: Math.round((dailyCal * 0.3) / 9), // 30% of calories, 9 cal/g
+      carbs: Math.round((dailyCal * 0.4) / 4), // 40% of calories, 4 cal/g
+    };
+  }, [data]);
+
+  if (loading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-emerald-600 border-r-transparent"></div>
+            <p className="mt-4 text-sm text-zinc-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardShell>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="text-sm font-medium text-red-800">{error}</div>
+          <button
+            onClick={() => loadDashboard()}
+            className="mt-2 text-sm text-red-600 hover:text-red-700 underline"
+          >
+            Try again
+          </button>
+        </div>
+      </DashboardShell>
+    );
+  }
+
+  if (!data) {
+    return null;
+  }
 
   return (
     <DashboardShell>
-      <div className="grid gap-6">
-        {/* Main Calorie Gauge and Quick Actions */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Today&apos;s Calories</CardTitle>
-              <CardDescription>Your daily progress</CardDescription>
-            </CardHeader>
-            <div className="flex items-center justify-center py-6">
-              <CalorieGauge consumed={todayCalories} goal={dailyGoal} size={240} />
-            </div>
-          </Card>
+      <div className="grid gap-6 lg:grid-cols-12">
+        {/* Left Sidebar - Quick Actions (hidden on mobile, shown on desktop) */}
+        <aside className="hidden lg:block lg:col-span-2">
+          <div className="sticky top-24">
+            <QuickActionCards />
+          </div>
+        </aside>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Quick access to main features</CardDescription>
-            </CardHeader>
-            <QuickActions onRefresh={() => setRefreshKey((k) => k + 1)} />
-          </Card>
+        {/* Main Content Area */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Today's Balance Card - Center */}
+          <div className="flex justify-center">
+            <div className="w-full max-w-md">
+              <TodaysBalanceCard
+                goal={data.dailyGoal}
+                consumed={data.today.calories}
+                remaining={remaining}
+              />
+            </div>
+          </div>
+
+          {/* Nutrition Breakdown Cards */}
+          <div>
+            <NutritionBreakdown
+              protein={data.today.protein}
+              fat={data.today.fat}
+              carbs={data.today.carbs}
+              proteinGoal={macroGoals.protein}
+              fatGoal={macroGoals.fat}
+              carbsGoal={macroGoals.carbs}
+            />
+          </div>
+
+          {/* Daily Health Impact Section */}
+          <DailyHealthImpact hasFoodLogged={hasFoodLogged} />
         </div>
 
-        {/* Today's Macros */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Today&apos;s Macros</CardTitle>
-            <CardDescription>Protein, Carbs, and Fat breakdown</CardDescription>
-          </CardHeader>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-lg bg-emerald-50 p-4">
-              <div className="text-sm text-emerald-600">Protein</div>
-              <div className="text-2xl font-bold text-emerald-900">{todayProtein}g</div>
-            </div>
-            <div className="rounded-lg bg-blue-50 p-4">
-              <div className="text-sm text-blue-600">Carbs</div>
-              <div className="text-2xl font-bold text-blue-900">{todayCarbs}g</div>
-            </div>
-            <div className="rounded-lg bg-yellow-50 p-4">
-              <div className="text-sm text-yellow-600">Fat</div>
-              <div className="text-2xl font-bold text-yellow-900">{todayFat}g</div>
-            </div>
+        {/* Right Sidebar */}
+        <aside className="hidden lg:block lg:col-span-3">
+          <div className="sticky top-24">
+            <RightSidebar />
           </div>
-        </Card>
+        </aside>
 
-        {/* Recent Meals */}
-        {recentMeals.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Meals</CardTitle>
-              <CardDescription>Your latest food entries</CardDescription>
-            </CardHeader>
-            <div className="space-y-2">
-              {recentMeals.map((meal) => (
-                <div
-                  key={meal.id}
-                  className="flex items-center justify-between rounded-lg border border-zinc-200 p-3"
-                >
-                  <div>
-                    <div className="font-medium text-zinc-900">{meal.foodName}</div>
-                    <div className="text-xs text-zinc-600 capitalize">{meal.mealType}</div>
-                  </div>
-                  <div className="text-sm font-semibold text-zinc-900">{meal.calories} kcal</div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        )}
-
-        {/* Weekly Chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Weekly Calories</CardTitle>
-            <CardDescription>Calories consumed over the last 7 days</CardDescription>
-          </CardHeader>
-          {error ? <div className="text-sm text-red-600">{error}</div> : null}
-          <div className="h-72 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="calories" fill="#10b981" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
+        {/* Mobile Quick Actions and Right Sidebar - shown only on mobile */}
+        <div className="lg:hidden space-y-4">
+          <QuickActionCards />
+          <RightSidebar />
+        </div>
       </div>
     </DashboardShell>
   );

@@ -27,8 +27,36 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // Check if NEXTAUTH_SECRET is configured
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) {
+    console.error("NEXTAUTH_SECRET is not configured");
+    // Allow access to public paths even if secret is missing
+    if (isPublicPath(pathname)) {
+      return NextResponse.next();
+    }
+    // For protected routes, redirect to login with error
+    if (!pathname.startsWith("/api")) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("error", "configuration");
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+  }
+
+  const token = await getToken({ req, secret });
   const isAuthed = Boolean(token);
+
+  // Helper function to check if user is admin
+  function isAdmin(email?: string | null) {
+    if (!email) return false;
+    const allow = (process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+    return allow.includes(email.toLowerCase());
+  }
+
+  const userEmail = token?.email as string | undefined;
+  const userIsAdmin = isAdmin(userEmail);
 
   // If not authed and trying to access protected route → /login
   if (!isAuthed && !isPublicPath(pathname) && !pathname.startsWith("/api")) {
@@ -43,10 +71,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // If authed and visiting login/register → send to onboarding
+  // If authed and visiting login/register → redirect based on admin status
   if (isAuthed && (pathname === "/login" || pathname === "/register")) {
     const url = req.nextUrl.clone();
-    url.pathname = "/onboarding";
+    url.pathname = userIsAdmin ? "/admin" : "/onboarding";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect admins from onboarding/dashboard to admin page
+  if (isAuthed && userIsAdmin && (pathname === "/onboarding" || pathname === "/dashboard")) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/admin";
     return NextResponse.redirect(url);
   }
 

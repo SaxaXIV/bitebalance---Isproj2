@@ -40,7 +40,17 @@ export function LoginForm() {
       setError("Invalid username or password.");
       return;
     }
-    router.push(res.url ?? callbackUrl);
+
+    // Check if user is admin via API and redirect accordingly
+    try {
+      const checkRes = await fetch("/api/admin/check");
+      const checkData = await checkRes.json();
+      const redirectUrl = checkData.isAdmin ? "/admin" : (res.url ?? callbackUrl);
+      router.push(redirectUrl);
+    } catch {
+      // Fallback to default redirect if check fails
+      router.push(res.url ?? callbackUrl);
+    }
   }
 
   async function onGoogle() {
@@ -51,6 +61,7 @@ export function LoginForm() {
       setError("Google login is not configured yet.");
       return;
     }
+    // Redirect will be handled by middleware based on admin status
     await signIn("google", { callbackUrl: "/onboarding" });
     // NextAuth will redirect; keep loading state for UI
   }

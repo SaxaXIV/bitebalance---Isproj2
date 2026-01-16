@@ -15,11 +15,19 @@ export async function GET() {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!isAdmin(email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
+  const adminEmails = (process.env.ADMIN_EMAILS ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
     select: { id: true, email: true, name: true, username: true, createdAt: true },
     take: 200,
   });
-  return NextResponse.json({ users });
+
+  const usersWithRole = users.map((user) => ({
+    ...user,
+    role: adminEmails.includes(user.email.toLowerCase()) ? "admin" : "member",
+  }));
+
+  return NextResponse.json({ users: usersWithRole });
 }
 
