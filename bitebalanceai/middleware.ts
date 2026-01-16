@@ -71,10 +71,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Redirect root path to login
+  if (pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
   // If authed and visiting login/register → redirect based on admin status
   if (isAuthed && (pathname === "/login" || pathname === "/register")) {
     const url = req.nextUrl.clone();
-    url.pathname = userIsAdmin ? "/admin" : "/onboarding";
+    url.pathname = userIsAdmin ? "/admin" : "/dashboard";
     return NextResponse.redirect(url);
   }
 

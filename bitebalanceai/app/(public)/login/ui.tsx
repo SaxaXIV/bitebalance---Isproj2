@@ -8,7 +8,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 export function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const callbackUrl = search?.get("callbackUrl") ?? "/onboarding";
+  const callbackUrl = search?.get("callbackUrl") ?? "/dashboard";
 
   const [googleEnabled, setGoogleEnabled] = React.useState(false);
   const [email, setEmail] = React.useState("");
@@ -45,11 +45,12 @@ export function LoginForm() {
     try {
       const checkRes = await fetch("/api/admin/check");
       const checkData = await checkRes.json();
-      const redirectUrl = checkData.isAdmin ? "/admin" : (res.url ?? callbackUrl);
+      // Admin goes to /admin, regular users go to /dashboard
+      const redirectUrl = checkData.isAdmin ? "/admin" : "/dashboard";
       router.push(redirectUrl);
     } catch {
-      // Fallback to default redirect if check fails
-      router.push(res.url ?? callbackUrl);
+      // Fallback to dashboard if check fails
+      router.push("/dashboard");
     }
   }
 
@@ -62,7 +63,7 @@ export function LoginForm() {
       return;
     }
     // Redirect will be handled by middleware based on admin status
-    await signIn("google", { callbackUrl: "/onboarding" });
+    await signIn("google", { callbackUrl: "/dashboard" });
     // NextAuth will redirect; keep loading state for UI
   }
 

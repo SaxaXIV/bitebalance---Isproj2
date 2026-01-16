@@ -136,7 +136,15 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // Check if user is admin and redirect accordingly
+    try {
+      const checkRes = await fetch("/api/admin/check");
+      const checkData = await checkRes.json();
+      router.push(checkData.isAdmin ? "/admin" : "/dashboard");
+    } catch {
+      // Fallback to dashboard if check fails
+      router.push("/dashboard");
+    }
   }
 
   return (
