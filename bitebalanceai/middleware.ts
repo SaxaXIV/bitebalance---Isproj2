@@ -27,6 +27,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // Redirect root path to login FIRST (before any auth checks)
+  if (pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
   // Check if NEXTAUTH_SECRET is configured
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) {
@@ -45,8 +52,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
   }
 
-  const token = await getToken({ req, secret });
-  const isAuthed = Boolean(token);
+  // Get token and validate it exists and is valid
+  const token = await getToken({ req, secret, secureCookie: process.env.NODE_ENV === "production" });
+  // Only consider authenticated if token exists AND has required fields (email)
+  const isAuthed = Boolean(token && token.email && typeof token.email === "string");
 
   // Helper function to check if user is admin
   function isAdmin(email?: string | null) {
@@ -69,13 +78,6 @@ export async function middleware(req: NextRequest) {
   // Block protected APIs too (except public ones)
   if (!isAuthed && pathname.startsWith("/api") && !isPublicPath(pathname)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Redirect root path to login
-  if (pathname === "/") {
-    const url = req.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
   }
 
   // If not authenticated and trying to access /admin → redirect to login
